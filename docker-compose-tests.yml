@@ -1,0 +1,76 @@
+# ============================================================
+# docker-compose-tests.yml
+# Saleor Platform — Automated Unit Test Suites
+# Extended Laboratory 1 (SQ_2026i) — Point 11
+#
+# Scope: UNIT TESTS ONLY
+#   - DB tier:  isolated PostgreSQL + SQL scripts (no real Saleor)
+#   - API tier: pytest with Fake/Stub/Mock (no DB, no network)
+#   - FE tier:  Jest + jsdom with mocked fetch and api module (no backend)
+#
+# Usage:
+#   docker compose -f docker-compose-tests.yml up --build
+#   docker compose -f docker-compose-tests.yml up --build saleor-db-tests
+#   docker compose -f docker-compose-tests.yml up --build saleor-api-tests
+#   docker compose -f docker-compose-tests.yml up --build saleor-fe-tests
+# ============================================================
+
+services:
+
+  # ── Isolated test database (not the real Saleor DB) ───────────────────
+  saleor-test-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: saleor
+      POSTGRES_PASSWORD: saleor
+      POSTGRES_DB: saleor_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saleor -d saleor_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Tier 1: DB unit tests ──────────────────────────────────────────────
+  # Runs SQL scripts against an isolated schema that mirrors Saleor's
+  # product tables. No application code involved.
+  saleor-db-tests:
+    image: postgres:15-alpine
+    environment:
+      DB_HOST: saleor-test-db
+      DB_USER: saleor
+      DB_PASS: saleor
+      DB_NAME: saleor_test
+      PGPASSWORD: saleor
+    volumes:
+      - ./saleor-db-tests:/tests
+    depends_on:
+      saleor-test-db:
+        condition: service_healthy
+    command: ["/bin/sh", "/tests/run-tests.sh"]
+
+  # ── Tier 2: API unit tests ─────────────────────────────────────────────
+  # Runs pytest against product_resolver.py (standalone module, no Django).
+  # Uses Fake (ProductQuerySet), Stub (mock_info), Mock (mock_info_spy).
+  # No database connection. No network calls.
+  saleor-api-tests:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - ./saleor-api-tests:/app
+    command: >
+      sh -c "pip install -q -r requirements.txt &&
+             pytest -v --tb=short test_product_resolver.py test_product_service.py"
+
+  # ── Tier 3: Frontend unit tests ────────────────────────────────────────
+  # Runs Jest against api.js and ProductList.jsx.
+  # global.fetch is replaced by a jest.fn() Stub.
+  # The api module is replaced by a jest.mock() Mock.
+  # No backend contacted.
+  saleor-fe-tests:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./saleor-dashboard-tests:/app
+    command: >
+      sh -c "npm install --silent &&
+             npm test -- --watchAll=false --forceExit"
