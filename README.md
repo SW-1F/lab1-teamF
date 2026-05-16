@@ -2,6 +2,7 @@
 
 - **Course:** Software Quality — SQ_2026i
 - **Team:** F
+- **Members:** Maria Jose Jara Herrera, Breyner Ismael Ciro Otero, Juan David Cristancho Rincon, Jairo Daniel Salas Mosquera, Aura Milena Alba, Carlos Alberto Cortez Polanco.
 - **System:** [saleor/saleor-platform](https://github.com/saleor/saleor-platform)
 - **Functional flow:** Product Listing — Dashboard → API resolver → Database
 - **Tiers covered:** Frontend (React/Jest) ↔ Backend (Python/pytest) ↔ Database (PostgreSQL/SQL)
