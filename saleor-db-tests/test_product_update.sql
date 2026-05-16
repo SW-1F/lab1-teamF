@@ -12,20 +12,33 @@ SET name = 'Saleor Test Laptop - Updated',
 WHERE slug = 'saleor-test-laptop';
 
 -- Verify: name was changed
-SELECT COUNT(*) AS updated_count
-FROM product_product
-WHERE name = 'Saleor Test Laptop - Updated'
-  AND slug = 'saleor-test-laptop';
+DO $$
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM product_product
+        WHERE slug = 'saleor-test-laptop'
+          AND name = 'Saleor Test Laptop - Updated'
+          AND is_published = FALSE
+    ) <> 1 THEN
+        RAISE EXCEPTION 'FAILED: expected updated product with new name and unpublished status';
+    END IF;
+END $$;
 -- Expected: updated_count = 1
 
 -- Verify: old name no longer exists
-SELECT COUNT(*) AS old_count
-FROM product_product
-WHERE name = 'Saleor Test Laptop';
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM product_product
+        WHERE slug = 'saleor-test-laptop'
+          AND name = 'Saleor Test Laptop'
+          AND is_published = TRUE
+    ) THEN
+        RAISE EXCEPTION 'FAILED: expected old product state to be gone after update';
+    END IF;
+END $$;
 -- Expected: old_count = 0
 
--- Verify: product is now unpublished
-SELECT is_published
-FROM product_product
-WHERE slug = 'saleor-test-laptop';
--- Expected: is_published = false
+SELECT 'PASSED: product update test' AS result;

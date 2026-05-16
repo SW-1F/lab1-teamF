@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "test": "jest --watchAll=false",
+    "test:ci": "jest --watchAll=false",
     "test:coverage": "jest --watchAll=false --coverage"
   },
   "dependencies": {
